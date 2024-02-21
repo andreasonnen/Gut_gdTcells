@@ -1,3 +1,98 @@
+#Run QC and pre-process
+
+#Load libraries
+library(Seurat)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+
+#Colon sample
+#Read in matrix
+data_dir <- '/Users/andson/Desktop/gdTcells/COL/filtered_feature_bc_matrix/'
+list.files(data_dir) 
+expression_matrix <- Read10X(data.dir = data_dir)
+Col.sample = CreateSeuratObject(counts = expression_matrix)
+
+Col.sample[["percent.mt"]] <- PercentageFeatureSet(Col.sample, pattern = "^MT-")
+Col.sample[["percent.HSP"]] <- PercentageFeatureSet(
+  object = Col.sample,
+  pattern = "^HSP"
+)
+
+# Visualize QC metrics as a violin plot
+VlnPlot(Col.sample, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0.0001)
+
+Col.sample <- subset(Col.sample, subset = nFeature_RNA > 200 & nFeature_RNA < 5000 & percent.mt < 4 & percent.HSP < 5 )
+
+Col.sample <- Col.sample[!grepl("MALAT1", rownames(Col.sample)), ]
+Col.sample <- Col.sample[!grepl("HSPA1B", rownames(Col.sample)), ]
+Col.sample <- Col.sample[!grepl("BAG3", rownames(Col.sample)), ]
+
+
+# run sctransform
+
+DefaultAssay(Col.sample)<- "RNA"
+Col.sample <- SCTransform(Col.sample, vars.to.regress = "percent.HSP", verbose = FALSE)
+
+# Visualization and clustering
+Col.sample <- RunPCA(Col.sample, verbose = FALSE)
+ElbowPlot(Col.sample)
+
+VizDimLoadings(Col.sample, dims = 1:2, reduction = "pca")
+
+
+Col.sample <- RunUMAP(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindNeighbors(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindClusters(Col.sample, resolution =  c(0.1, 0.3, 0.4, 0.5, 1))
+
+
+#Idents(Col.sample)<- "SCT_snn_res.0.3"
+Idents(Col.sample)<- "SCT_snn_res.0.1"
+
+DimPlot(Col.sample, label = TRUE)
+
+#Find Cell markers representative of each cluster
+cell.markers <- FindAllMarkers(Col.sample, only.pos = TRUE)
+cell.markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10
+DoHeatmap(Col.sample, features = top10$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
+
+#Checking for doublets
+#library(scDblFinder)
+#Convert your seurat object to a sce object
+#sce <- as.SingleCellExperiment(Col.sample, assay = "SCT")
+#sce <- scDblFinder(sce, clusters=sce$SCT_snn_res.0.1)
+#plotUMAP(sce, colour_by="scDblFinder.score")
+#table(sce$scDblFinder.class)
+
+#singlet 4194, doublet 5 cells (0.1%)
+
+Idents(Col.sample)
+
+
+#Removing cluster 0 as it corresponds to stressed cells
+Col.sample <- subset(Col.sample, ident = "0", invert =TRUE)
+
+#Rerun pre-processing 
+Col.sample <- SCTransform(Col.sample, vars.to.regress = "percent.HSP", verbose = FALSE)
+
+# Visualization and clustering
+Col.sample <- RunPCA(Col.sample, verbose = FALSE)
+ElbowPlot(Col.sample)
+
+VizDimLoadings(Col.sample, dims = 1:2, reduction = "pca")
+
+Col.sample <- RunUMAP(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindNeighbors(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindClusters(Col.sample, resolution =  c(0.1, 0.3, 0.4, 0.5, 1))
+
+Idents(Col.sample)<- "SCT_snn_res.0.1"
+
+
 #Figure 7a - Small Intestine sample
 
 #Visualize the different clusters in a UMAP
