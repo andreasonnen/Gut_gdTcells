@@ -1,1 +1,49 @@
+#Figure 7a - Small Intestine sample
+
+#Visualize the different clusters in a UMAP
+DimPlot(Col.sample, label = TRUE
+
+#Delta Chains
+FeaturePlot(object = SI.object, 
+            features = c("TRDV1", "TRDV2", "TRDV3"),
+            order = TRUE,
+            min.cutoff = 'q10', 
+            label = TRUE, keep.scale = "all", ncol = 3)
+
+
+#Figure 7b - Colon Sample
+#Visualize the different clusters in a UMAP
+DimPlot(SI.object, label = TRUE)
+
+#Delta Chains
+FeaturePlot(object = SI.object, 
+            features = c("TRDV1", "TRDV2", "TRDV3"),
+            order = TRUE,
+            min.cutoff = 'q10', 
+            label = TRUE, keep.scale = "all", ncol = 3)
+
+
+
+#Figur 7c - Small Intestine sample
+cell.markers.si <- FindAllMarkers(SI.object, only.pos = TRUE)
+
+cell.markers.si %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10.si
+
+DoHeatmap(SI.object, features = top10.si$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
+
+
+#Figur 7d - Colon Sample
+cell.markers.col <- FindAllMarkers(Col.sample, only.pos = TRUE)
+
+cell.markers.col %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10.col
+
+DoHeatmap(Col.sample, features = top10.col$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
 
