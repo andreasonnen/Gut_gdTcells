@@ -84,4 +84,75 @@ DoHeatmap(cluster.averages, features = gene_order, size = 5, raster = FALSE,  la
 Figure 8C - Gene Co-expression
 library(scCustomize)
 
+#Small Intestine
+RORC_SI<- subset(SI.object, RORC > 0)
+
+Idents(RORC_SI) <- "SCT_snn_res.0.1"
+
+gdt_related = c("RORC", "MAF","TBX21", "CCR6", "CXCR6", "IL23R", "RORA", "DPP4", "BLK", "BHLHE40", "KLRB1","ZBTB16")
+
+percent <- Percent_Expressing(seurat_object = RORC_SI, features = gdt_related, group_by= "SCT_snn_res.0.1")
+
+percent_entire_object <- Percent_Expressing(seurat_object = RORC_SI, features = gdt_related, entire_object= TRUE)
+
+percent_entire_object <- as.data.frame(percent_entire_object)
+
+# Assuming percent_entire_object is already a data frame
+gene_names <- rownames(percent_entire_object)
+percentages <- percent_entire_object$All_Cells
+
+# Create a new data frame
+coexpression_data <- data.frame(Gene = gene_names, Percentage = percentages)
+
+# Create a new column for fill color
+coexpression_data$FillColor <- ifelse(coexpression_data$Gene == "RORC", "blue", "skyblue")
+
+
+ggplot(coexpression_data, aes(x = reorder(Gene, -Percentage), y = Percentage, fill = FillColor)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  labs(title = "human siLP",
+       x = "Genes",
+       y = "Percentage of RORC+ cells expressing selected gene") +
+  scale_fill_identity() +
+  scale_y_continuous(limits = c(0, max(coexpression_data$Percentage)), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+        axis.line = element_line(color = "black"))  # Set axis line color to black
+
+
+
+
+#Colon
+RORC_COL<- subset(Col.sample, RORC > 0)
+
+Idents(RORC_COL) <- "SCT_snn_res.0.1"
+
+gdt_related = c("RORC", "MAF","TBX21", "CCR6", "CXCR6", "IL23R", "RORA", "DPP4", "BLK", "BHLHE40", "KLRB1","ZBTB16", "TRAV6")
+
+percent <- Percent_Expressing(seurat_object = RORC_COL, features = gdt_related, group_by= "SCT_snn_res.0.1")
+
+percent_entire_object <- Percent_Expressing(seurat_object = RORC_COL, features = gdt_related, entire_object= TRUE)
+
+percent_entire_object <- as.data.frame(percent_entire_object)
+
+# Assuming percent_entire_object is already a data frame
+gene_names <- rownames(percent_entire_object)
+percentages <- percent_entire_object$All_Cells
+
+# Create a new data frame
+coexpression_data <- data.frame(Gene = gene_names, Percentage = percentages)
+
+# Create a new column for fill color
+coexpression_data$FillColor <- ifelse(coexpression_data$Gene == "RORC", "blue", "skyblue")
+
+# Create the plot
+ggplot(coexpression_data, aes(x = reorder(Gene, -Percentage), y = Percentage, fill = FillColor)) +
+  geom_bar(stat = "identity",  width = 0.7) +
+  labs(title = "human cLP",
+       x = "Genes",
+       y = "Percentage of RORC+ cells expressing selected gene") +
+  scale_fill_identity() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
 
