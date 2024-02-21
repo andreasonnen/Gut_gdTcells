@@ -1,1 +1,87 @@
+Figure 8A - Small Intestine sample
+
+#UMAP
+DimPlot(SI.object, label = TRUE)
+#Maker genes
+FeaturePlot(object = SI.object, 
+            features = c("MAF", "RORC", "TBX21"),
+            order = TRUE,
+            #   min.cutoff = 'q10', 
+            label = TRUE,
+            repel = TRUE,
+            keep.scale = "all", ncol = 3)
+#Extra_markers
+FeaturePlot(object = SI.object, 
+            reduction = "umap", 
+            features = c("IL7R", "KLRB1", "CCR6", "DPP4"), 
+            order = TRUE,
+            #  min.cutoff = 'q10', 
+            label = TRUE, keep.scale = "all", ncol = 4)
+#Heatmap
+cluster.averages <- AverageExpression(SI.object, assays = "SCT",  group.by = "ident", return.seurat = TRUE)
+
+head(cluster.averages[["SCT"]][, 1:7])
+
+cluster.averages$orig.ident
+
+# New cluster names
+new_names <- c("Cluster 0", "Cluster 1", "Cluster 2", "Cluster 3")
+
+# Update row values
+cluster.averages$orig.ident <- new_names
+
+#Genes of interest list
+gene_order <- c("JUNB", "NR4A2", "NR4A3", "FOSL2", "AREG", "CTLA4","ITGA1","LITAF", "FASLG", "MAF","CCL20", "BHLHE40", 
+                "SLAMF7", "RORC", "TBX21","IFNG", "PTGS2",  "NR4A1", "LIF")
+
+DoHeatmap(cluster.averages, features = gene_order, size = 5, raster = FALSE,  label = TRUE, group.by = "orig.ident",
+          draw.lines = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) + guides(color = "none")
+
+
+
+
+Figure 8B - Colon sample
+
+#UMAP
+DimPlot(Col.sample, label = TRUE)
+#Maker genes
+FeaturePlot(object = Col.sample, 
+            features = c("MAF", "RORC", "TBX21"),
+            order = TRUE,
+            #   min.cutoff = 'q10', 
+            label = TRUE,
+            repel = TRUE,
+            keep.scale = "all", ncol = 3)
+#Extra_markers
+FeaturePlot(object = Col.sample, 
+            reduction = "umap", 
+            features = c("IL7R", "KLRB1", "CCR6", "DPP4"), 
+            order = TRUE,
+            #  min.cutoff = 'q10', 
+            label = TRUE, keep.scale = "all", ncol = 4)
+
+#Heatmap with genes of interest
+cluster.averages <- AverageExpression(Col.sample, assays = "SCT",  layer = "data", group.by = "ident", return.seurat = TRUE)
+
+head(cluster.averages[["SCT"]][, 1:7])
+
+cluster.averages$orig.ident
+
+# New cluster names
+new_names <- c("Cluster 0", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4")
+
+# Update row values
+cluster.averages$orig.ident <- new_names
+
+# Display updated row values
+print(cluster.averages$orig.ident)
+
+DoHeatmap(cluster.averages, features = gene_order, size = 5, raster = FALSE,  label = TRUE, group.by = "orig.ident",
+          draw.lines = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) + guides(color = "none")
+
+
+
+Figure 8C - Gene Co-expression
+library(scCustomize)
+
 
