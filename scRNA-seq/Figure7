@@ -7,7 +7,7 @@ library(dplyr)
 library(ggplot2)
 
 
-#Colon sample
+##Colon sample
 #Read in matrix
 data_dir <- '/Users/andson/Desktop/gdTcells/COL/filtered_feature_bc_matrix/'
 list.files(data_dir) 
@@ -92,6 +92,54 @@ Col.sample <- FindClusters(Col.sample, resolution =  c(0.1, 0.3, 0.4, 0.5, 1))
 
 Idents(Col.sample)<- "SCT_snn_res.0.1"
 
+##Small intestine sample
+
+#Read in matrix
+data_dir <- '/Users/andson/Desktop/gdTcells/SI/filtered_feature_bc_matrix/'
+list.files(data_dir) # Should show barcodes.tsv, genes.tsv, and matrix.mtx
+expression_matrix <- Read10X(data.dir = data_dir)
+SI.object = CreateSeuratObject(counts = expression_matrix)
+
+
+DefaultAssay(SI.object)<- "RNA"
+
+
+# The [[ operator can add SIumns to object metadata. This is a great place to stash QC stats
+SI.object[["percent.mt"]] <- PercentageFeatureSet(SI.object, pattern = "^MT-")
+SI.object[["percent.HSP"]] <- PercentageFeatureSet(
+  object = SI.object,
+  pattern = "^HSP"
+)
+
+# Visualize QC metrics as a violin plot
+VlnPlot(SI.object, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.HSP"), ncol = 4, pt.size = 0.0001)
+
+SI.object <- subset(SI.object, subset = nFeature_RNA > 200 & nFeature_RNA < 4000 & percent.mt < 4 & percent.HSP < 2 )
+
+SI.object <- SI.object[!grepl("MALAT1", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("HSPA1B", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("HSPA1A", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("BAG3", rownames(SI.object)), ]
+
+
+# run sctransform
+SI.object <- SCTransform(SI.object, vars.to.regress = "percent.HSP", verbose = FALSE)
+
+
+# Visualization and clustering
+SI.object <- RunPCA(SI.object, verbose = FALSE)
+ElbowPlot(SI.object)
+
+VizDimLoadings(SI.object, dims = 1:2, reduction = "pca")
+
+
+SI.object <- RunUMAP(SI.object, dims = 1:20, verbose = FALSE)
+
+SI.object <- FindNeighbors(SI.object, dims = 1:20, verbose = FALSE)
+SI.object <- FindClusters(SI.object, resolution =  c(0.1, 0.2, 0.3, 0.4, 0.5))
+
+#Idents(COL.object)<- "SCT_snn_res.0.3"
+Idents(SI.object)<- "SCT_snn_res.0.1"
 
 #Figure 7a - Small Intestine sample
 
@@ -116,7 +164,6 @@ FeaturePlot(object = SI.object,
             order = TRUE,
             min.cutoff = 'q10', 
             label = TRUE, keep.scale = "all", ncol = 3)
-
 
 
 #Figur 7c - Small Intestine sample
