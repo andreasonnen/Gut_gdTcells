@@ -1,6 +1,6 @@
 # Gut_gdTcells
 
-In this repository you will find all code to reproduce figures in (Insert title of the paper).
+In this repository you will find all code to reproduce the figures in (Insert title of the paper).
 
 To find the data analysed in the article.. (Where will the data be stored?)
 
