@@ -3,126 +3,173 @@
 library(Seurat)
 library(tidyverse)
 library(dplyr)
+library(ggplot2)
 
 #Colon sample
-#Read in results/matrix from cell ranger alignment
+
+#Load libraries
+library(Seurat)
+library(tidyverse)
+library(muscat)
+library(dplyr)
+
+#Colon sample
+#Read in matrix
 data_dir <- '/Users/andson/Desktop/gdTcells/COL/filtered_feature_bc_matrix/'
-list.files(data_dir) # Should show barcodes.tsv, genes.tsv, and matrix.mtx
+list.files(data_dir) 
 expression_matrix <- Read10X(data.dir = data_dir)
-COL.object = CreateSeuratObject(counts = expression_matrix)
+Col.sample = CreateSeuratObject(counts = expression_matrix)
 
-DefaultAssay(COL.object)<- "RNA"
-
-# The [[ operator can add columns to object metadata. This is a great place to stash QC stats
-COL.object[["percent.mt"]] <- PercentageFeatureSet(COL.object, pattern = "^MT-")
+Col.sample[["percent.mt"]] <- PercentageFeatureSet(Col.sample, pattern = "^MT-")
+Col.sample[["percent.HSP"]] <- PercentageFeatureSet(
+  object = Col.sample,
+  pattern = "^HSP"
+)
 
 # Visualize QC metrics as a violin plot
-VlnPlot(COL.object, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0.0001)
+VlnPlot(Col.sample, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0.0001)
 
-COL.object <- subset(COL.object, subset = nFeature_RNA > 200 & nFeature_RNA < 4000 & percent.mt < 4)
+Col.sample <- subset(Col.sample, subset = nFeature_RNA > 200 & nFeature_RNA < 5000 & percent.mt < 4 & percent.HSP < 5 )
 
-COL.object <- NormalizeData(COL.object, normalization.method = "LogNormalize", scale.factor = 10000)
-
-
-COL.object <- FindVariableFeatures(COL.object, selection.method = "vst", nfeatures = 2000)
-
-
-# Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(COL.object), 10)
-
-# plot variable features with and without labels
-plot1 <- VariableFeaturePlot(COL.object)
-plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-plot1 + plot2
-
-all.genes <- rownames(COL.object)
-COL.object <- ScaleData(COL.object, features = all.genes)
-
-COL.object <- RunPCA(COL.object, features = VariableFeatures(object = COL.object))
-
-ElbowPlot(COL.object)
-
-COL.object <- FindNeighbors(COL.object, dims = 1:12)
-COL.object <- FindClusters(COL.object, resolution = c(0.1, 0.5))
-
-COL.object <- RunUMAP(COL.object, dims = 1:12)
-
-
-Idents(COL.object)<- "RNA_snn_res.0.1"
-
-DimPlot(COL.object, reduction = "umap")
-
-
-VlnPlot(object = COL.object, features = c("TRDV2"))
-
+Col.sample <- Col.sample[!grepl("MALAT1", rownames(Col.sample)), ]
+Col.sample <- Col.sample[!grepl("HSPA1B", rownames(Col.sample)), ]
+Col.sample <- Col.sample[!grepl("BAG3", rownames(Col.sample)), ]
 
 
 # run sctransform
-COL.object <- SCTransform(COL.object, vars.to.regress = "percent.mt", verbose = FALSE)
 
-#COL.object <- NormalizeData(COL.object, normalization.method = "LogNormalize", scale.factor = 10000, verbose = FALSE)
+DefaultAssay(Col.sample)<- "RNA"
+Col.sample <- SCTransform(Col.sample, vars.to.regress = "percent.HSP", verbose = FALSE)
 
 # Visualization and clustering
-COL.object <- RunPCA(COL.object, verbose = FALSE)
-ElbowPlot(COL.object)
-COL.object <- RunUMAP(COL.object, dims = 1:15, verbose = FALSE)
+Col.sample <- RunPCA(Col.sample, verbose = FALSE)
+ElbowPlot(Col.sample)
 
-COL.object <- FindNeighbors(COL.object, dims = 1:15, verbose = FALSE)
-COL.object <- FindClusters(COL.object, resolution =  c(0.3, 0.4, 0.5, 1))
+VizDimLoadings(Col.sample, dims = 1:2, reduction = "pca")
 
-library(clustree)
 
-clustree(COL.object, prefix = "SCT_snn_res.")
+Col.sample <- RunUMAP(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindNeighbors(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindClusters(Col.sample, resolution =  c(0.1, 0.3, 0.4, 0.5, 1))
+
+
+#Idents(Col.sample)<- "SCT_snn_res.0.3"
+Idents(Col.sample)<- "SCT_snn_res.0.1"
+
+DimPlot(Col.sample, label = TRUE)
+
+#Find Cell markers representative of each cluster
+cell.markers <- FindAllMarkers(Col.sample, only.pos = TRUE)
+cell.markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10
+DoHeatmap(Col.sample, features = top10$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
+
+#Checking for doublets
+#library(scDblFinder)
+#Convert your seurat object to a sce object
+#sce <- as.SingleCellExperiment(Col.sample, assay = "SCT")
+#sce <- scDblFinder(sce, clusters=sce$SCT_snn_res.0.1)
+#plotUMAP(sce, colour_by="scDblFinder.score")
+#table(sce$scDblFinder.class)
+
+#singlet 4194, doublet 5 cells (0.1%)
+
+Idents(Col.sample)
+
+
+#Removing cluster 0 as it corresponds to stressed cells
+Col.sample <- subset(Col.sample, ident = "0", invert =TRUE)
+
+#Rerun pre-processing 
+Col.sample <- SCTransform(Col.sample, vars.to.regress = "percent.HSP", verbose = FALSE)
+
+# Visualization and clustering
+Col.sample <- RunPCA(Col.sample, verbose = FALSE)
+ElbowPlot(Col.sample)
+
+VizDimLoadings(Col.sample, dims = 1:2, reduction = "pca")
+
+Col.sample <- RunUMAP(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindNeighbors(Col.sample, dims = 1:15, verbose = FALSE)
+Col.sample <- FindClusters(Col.sample, resolution =  c(0.1, 0.3, 0.4, 0.5, 1))
+
+Idents(Col.sample)<- "SCT_snn_res.0.1"
+
+DimPlot(Col.sample, label = TRUE)
+
+cell.markers <- FindAllMarkers(Col.sample, only.pos = TRUE)
+
+cell.markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10
+
+DoHeatmap(Col.sample, features = top10$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
+
+
+
+#Small intestine sample
+
+#Read in matrix
+data_dir <- '/Users/andson/Desktop/gdTcells/SI/filtered_feature_bc_matrix/'
+list.files(data_dir) # Should show barcodes.tsv, genes.tsv, and matrix.mtx
+expression_matrix <- Read10X(data.dir = data_dir)
+SI.object = CreateSeuratObject(counts = expression_matrix)
+
+
+DefaultAssay(SI.object)<- "RNA"
+
+
+# The [[ operator can add SIumns to object metadata. This is a great place to stash QC stats
+SI.object[["percent.mt"]] <- PercentageFeatureSet(SI.object, pattern = "^MT-")
+SI.object[["percent.HSP"]] <- PercentageFeatureSet(
+  object = SI.object,
+  pattern = "^HSP"
+)
+
+# Visualize QC metrics as a violin plot
+VlnPlot(SI.object, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.HSP"), ncol = 4, pt.size = 0.0001)
+
+SI.object <- subset(SI.object, subset = nFeature_RNA > 200 & nFeature_RNA < 4000 & percent.mt < 4 & percent.HSP < 2 )
+
+SI.object <- SI.object[!grepl("MALAT1", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("HSPA1B", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("HSPA1A", rownames(SI.object)), ]
+SI.object <- SI.object[!grepl("BAG3", rownames(SI.object)), ]
+
+
+# run sctransform
+SI.object <- SCTransform(SI.object, vars.to.regress = "percent.HSP", verbose = FALSE)
+
+
+# Visualization and clustering
+SI.object <- RunPCA(SI.object, verbose = FALSE)
+ElbowPlot(SI.object)
+
+VizDimLoadings(SI.object, dims = 1:2, reduction = "pca")
+
+
+SI.object <- RunUMAP(SI.object, dims = 1:20, verbose = FALSE)
+
+SI.object <- FindNeighbors(SI.object, dims = 1:20, verbose = FALSE)
+SI.object <- FindClusters(SI.object, resolution =  c(0.1, 0.2, 0.3, 0.4, 0.5))
 
 #Idents(COL.object)<- "SCT_snn_res.0.3"
-Idents(COL.object)<- "SCT_snn_res.0.3"
+Idents(SI.object)<- "SCT_snn_res.0.1"
 
-DimPlot(COL.object, label = TRUE)
+DimPlot(SI.object, label = TRUE)
 
+cell.markers <- FindAllMarkers(SI.object, only.pos = TRUE)
 
+cell.markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10
 
-#Which are T cells
-
-#Which are Nk cells
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("GNLY", "NK"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-
-#Which are Nk cells
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("TRDV2", "TRGV9"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("TRAC", "TRBC1", "TRBC2"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("KLRB1", "TRAV1-2"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("FCGR3A", "EOMES","TBX21", "CD8A", "CD8B"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-
-FeaturePlot(COL.object, 
-            reduction = "umap", 
-            features = c("FCGR3A", "EOMES","TBX21", "CD8A", "CD8B"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
+DoHeatmap(SI.object, features = top10$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
 
