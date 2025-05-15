@@ -1,7 +1,4 @@
 # Gut_gdTcells
 
-In this repository you will find all code to reproduce the figures in (Insert title of the paper).
-
-To find the data analysed in the article.. (Where will the data be stored?)
-
-To download all the reproducible code, please clone this repository using git clone (TBD)
+In this repository you will find all code to reproduce the figures in _Intestinal RORγt-expressing γδ T cells are conserved in mice and humans and acquire hybrid type 1/3 immunity during neonatal life under the control of Tbet
+_
