@@ -1,0 +1,81 @@
+#Script used to create plots presented in S7
+
+##Colon sample
+#UMAP -S7D
+DimPlot(Col.sample, label = TRUE)
+#Maker genes
+FeaturePlot(object = Col.sample, 
+            features = c("MAF", "RORC", "TBX21"),
+            order = TRUE,
+            #   min.cutoff = 'q10', 
+            label = TRUE,
+            repel = TRUE,
+            keep.scale = "all", ncol = 3)
+#Extra_markers
+FeaturePlot(object = Col.sample, 
+            reduction = "umap", 
+            features = c("IL7R", "KLRB1", "CCR6", "DPP4"), 
+            order = TRUE,
+            #  min.cutoff = 'q10', 
+            label = TRUE, keep.scale = "all", ncol = 4)
+
+#Heatmap  - S7E
+cluster.averages <- AverageExpression(Col.sample, assays = "SCT",  layer = "data", group.by = "ident", return.seurat = TRUE)
+
+head(cluster.averages[["SCT"]][, 1:7])
+
+cluster.averages$orig.ident
+
+# New cluster names
+new_names <- c("Cluster 0", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4")
+
+# Update row values
+cluster.averages$orig.ident <- new_names
+
+# Display updated row values
+print(cluster.averages$orig.ident)
+
+
+#Heatmap with genes of interest - S7G
+DoHeatmap(cluster.averages, features = gene_order, size = 5, raster = FALSE,  label = TRUE, group.by = "orig.ident",
+          draw.lines = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) + guides(color = "none")
+
+
+
+
+library(scCustomize)
+
+#Colon - RORC coexpressing - S7F
+RORC_COL<- subset(Col.sample, RORC > 0)
+
+Idents(RORC_COL) <- "SCT_snn_res.0.1"
+
+gdt_related = c("RORC", "MAF","TBX21", "CCR6", "CXCR6", "IL23R", "RORA", "DPP4", "BLK", "BHLHE40", "KLRB1","ZBTB16", "TRAV6")
+
+percent <- Percent_Expressing(seurat_object = RORC_COL, features = gdt_related, group_by= "SCT_snn_res.0.1")
+
+percent_entire_object <- Percent_Expressing(seurat_object = RORC_COL, features = gdt_related, entire_object= TRUE)
+
+percent_entire_object <- as.data.frame(percent_entire_object)
+
+# Assuming percent_entire_object is already a data frame
+gene_names <- rownames(percent_entire_object)
+percentages <- percent_entire_object$All_Cells
+
+# Create a new data frame
+coexpression_data <- data.frame(Gene = gene_names, Percentage = percentages)
+
+# Create a new column for fill color
+coexpression_data$FillColor <- ifelse(coexpression_data$Gene == "RORC", "blue", "skyblue")
+
+# Create the plot
+ggplot(coexpression_data, aes(x = reorder(Gene, -Percentage), y = Percentage, fill = FillColor)) +
+  geom_bar(stat = "identity",  width = 0.7) +
+  labs(title = "human cLP",
+       x = "Genes",
+       y = "Percentage of RORC+ cells expressing selected gene") +
+  scale_fill_identity() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
+
