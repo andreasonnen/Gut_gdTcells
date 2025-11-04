@@ -1,6 +1,6 @@
 #Script used to create Supplementary figure S8
 
-# Select gene to analyze
+# Select gene to analyze for corexpression
 selected_gene1 <- "RORC"
 
 # Access the count matrix from COLON sample
