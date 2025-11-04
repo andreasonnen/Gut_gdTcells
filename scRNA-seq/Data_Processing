@@ -166,7 +166,6 @@ FeaturePlot(object = SI.object,
             label = TRUE, keep.scale = "all", ncol = 3)
 
 
-#Figur 7c - Small Intestine sample
 cell.markers.si <- FindAllMarkers(SI.object, only.pos = TRUE)
 
 cell.markers.si %>%
@@ -178,7 +177,6 @@ cell.markers.si %>%
 DoHeatmap(SI.object, features = top10.si$gene, raster = FALSE) +  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n =4, name = "RdBu"))) 
 
 
-#Figur 7d - Colon Sample
 cell.markers.col <- FindAllMarkers(Col.sample, only.pos = TRUE)
 
 cell.markers.col %>%
