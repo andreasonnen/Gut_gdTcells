@@ -1,1 +1,81 @@
 #Script used to create Supplementary figure S8
+
+# Select gene to analyze
+selected_gene1 <- "RORC"
+
+# Access the count matrix from COLON sample
+count_matrix <- GetAssayData(Col.sample, assay = "SCT", layer = "data")
+
+# Check co-expression of RORC with all other genes
+results <- data.frame(gene = rownames(count_matrix))
+results$r <- apply(count_matrix, 1, function(x) cor.test(count_matrix[selected_gene1,], x)$estimate)
+results$p <- apply(count_matrix, 1, function(x) cor.test(count_matrix[selected_gene1,], x)$p.value)
+
+# Adjust p-values using Bonferroni correction
+results$bon <- results$p * length(results$p)
+results$log10_p <- -log10(results$p)
+
+# Filter genes with Bonferroni-corrected p-value < 0.05
+filtered_results <- subset(results, bon < 0.05)
+
+# Visualize the top 35 genes
+top_genes <- head(filtered_results[order(filtered_results$bon), ], 35)
+
+ggplot(top_genes, aes(x = log10_p, y = gene)) + 
+  geom_bar(stat = "identity", fill = "#E8A582") +
+  labs(title = "top genes of RORC+ γδ T in neonatal human colon", 
+       x = "-Log10 P",
+       y = NULL) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(color = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.text.y = element_text(color = "black"),
+    axis.text.x = element_text(color = "black"),
+    axis.title = element_text(color = "black")
+  )
+
+
+# Select gene to analyze
+selected_gene1 <- "RORC"
+
+# Access the count matrix from SMALL INTESTINE sample
+count_matrix <- GetAssayData(SI.object, assay = "SCT", layer = "data")
+
+# Check co-expression of RORC with all other genes
+results <- data.frame(gene = rownames(count_matrix))
+results$r <- apply(count_matrix, 1, function(x) cor.test(count_matrix[selected_gene1,], x)$estimate)
+results$p <- apply(count_matrix, 1, function(x) cor.test(count_matrix[selected_gene1,], x)$p.value)
+
+# Adjust p-values using Bonferroni correction
+results$bon <- results$p * length(results$p)
+results$log10_p <- -log10(results$p)
+
+# Filter genes with Bonferroni-corrected p-value < 0.05
+filtered_results <- subset(results, bon < 0.05)
+
+# Visualize the top 35 genes
+top_genes <- head(filtered_results[order(filtered_results$bon), ], 35)
+
+ggplot(top_genes, aes(x = log10_p, y = gene)) + 
+  geom_bar(stat = "identity", fill = "#E8A582") +
+  labs(title = "top genes of RORC+ γδ T in neonatal human siLP", 
+       x = "-Log10 P",
+       y = NULL) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(color = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.text.y = element_text(color = "black"),
+    axis.text.x = element_text(color = "black"),
+    axis.title = element_text(color = "black")
+  )
+
